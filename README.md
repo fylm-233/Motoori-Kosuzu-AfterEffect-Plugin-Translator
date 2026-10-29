@@ -5,6 +5,12 @@
 
 **仅发布框架，默认不附带翻译词典。** 支持 Windows x64，当前以 After Effects 2026 为测试目标；Premiere Pro 暂未接入。
 **Releases**提供了一键安装的版本，本项目不定期维护，本项目为GPT6sol+codex许愿式编程创建产物，目的其实仅本人日常使用。
+前往 [Releases](https://github.com/fylm-233/Motoori-Kosuzu-AfterEffect-Plugin-Translator/releases) 下载空词典 EXE 安装包或完整内容 ZIP。
+## 为什么不提供现成词典？
+
+汉化参考可能涉及一些**付费插件汉化组**所享有的“知识产权”，因此本项目仅提供汉化框架，不提供现成翻译词典。建议自行添加汉化，或导入已经取得授权的词典。这部分可以自行去寻找一些在线的AI翻译，只要格式对上导入字库就行格式为：**English=英文**
+添加与使用方法如下图：
+![Kosuzu 自定义词典与批量汉化操作演示](docs/assets/dictionary-demo.gif)
 ## 构建
 
 依赖：Rust 1.75+（`x86_64-pc-windows-msvc`，rustup 默认安装即可）、MSVC Build Tools。
