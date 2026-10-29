@@ -1,0 +1,16 @@
+// Private strict JSON codec for the IPC protocol; no eval and no global JSON dependency.
+var LBJSON=(function(){
+ function parse(input){var s=String(input).replace(/^\uFEFF/,''),i=0,depth=0;
+  function fail(){throw Error('Invalid JSON at '+i);}function ws(){while(/\s/.test(s.charAt(i))&&i<s.length)i++;}
+  function str(){if(s.charAt(i++)!=='"')fail();var r='',c,e,h;while(i<s.length){c=s.charAt(i++);if(c==='"')return r;if(c==='\\'){e=s.charAt(i++);if(e==='u'){h=s.substr(i,4);if(!/^[a-fA-F0-9]{4}$/.test(h))fail();r+=String.fromCharCode(parseInt(h,16));i+=4;}else if(e==='"'||e==='\\'||e==='/')r+=e;else if(e==='n')r+='\n';else if(e==='r')r+='\r';else if(e==='t')r+='\t';else if(e==='b')r+='\b';else if(e==='f')r+='\f';else fail();}else{if(c.charCodeAt(0)<32)fail();r+=c;}}fail();}
+  function val(){ws();if(++depth>32)fail();var c=s.charAt(i),r,k,m;
+   if(c==='"')r=str();else if(c==='{'){i++;r={};ws();if(s.charAt(i)==='}')i++;else while(true){ws();k=str();if(k==='__proto__'||k==='constructor'||k==='prototype')fail();ws();if(s.charAt(i++)!==':')fail();r[k]=val();ws();c=s.charAt(i++);if(c==='}')break;if(c!==',')fail();}}
+   else if(c==='['){i++;r=[];ws();if(s.charAt(i)===']')i++;else while(true){r.push(val());ws();c=s.charAt(i++);if(c===']')break;if(c!==',')fail();}}
+   else if(s.substr(i,4)==='true'){i+=4;r=true;}else if(s.substr(i,5)==='false'){i+=5;r=false;}else if(s.substr(i,4)==='null'){i+=4;r=null;}
+   else{m=/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/.exec(s.substr(i));if(!m)fail();i+=m[0].length;r=Number(m[0]);if(!isFinite(r))fail();}depth--;return r;
+  }var result=val();ws();if(i!==s.length)fail();return result;
+ }
+ function quote(s){return '"'+String(s).replace(/["\\\x00-\x1f]/g,function(c){if(c==='"'||c==='\\')return '\\'+c;return '\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4);})+'"';}
+ function stringify(v){if(v===null)return 'null';if(typeof v==='string')return quote(v);if(typeof v==='boolean')return v?'true':'false';if(typeof v==='number'){if(!isFinite(v))throw Error('Nonfinite number');return String(v);}var rows=[],k;if(v instanceof Array){for(k=0;k<v.length;k++)rows.push(stringify(v[k]));return '['+rows.join(',')+']';}if(typeof v!=='object')throw Error('Unsupported JSON value');for(k in v)if(Object.prototype.hasOwnProperty.call(v,k))rows.push(quote(k)+':'+stringify(v[k]));return '{'+rows.join(',')+'}';}
+ return {parse:parse,stringify:stringify};
+})();
