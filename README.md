@@ -5,10 +5,10 @@
 
 **仅发布框架，默认不附带翻译词典。** 支持 Windows x64，当前以 After Effects 2026 为测试目标；Premiere Pro 暂未接入。
 **Releases**提供了一键安装的版本，本项目不定期维护，本项目为GPT6sol+codex许愿式编程创建产物，目的其实仅本人日常使用。
-前往 [Releases](https://github.com/fylm-233/Motoori-Kosuzu-AfterEffect-Plugin-Translator/releases) 下载空词典 EXE 安装包或完整内容 ZIP。
+前往 [Releases](https://github.com/fylm-233/Motoori-Kosuzu-AfterEffect-Plugin-Translator/releases) 下载空词典EXE安装包或者ZIP。
 ## 为什么不提供现成词典？
 
-汉化参考可能涉及某些**付费插件汉化组**所享有的“知识产权”，因此本项目仅提供汉化框架，不提供现成翻译词典。建议自行添加汉化，或导入已经取得授权的词典。这部分可以自行去寻找一些在线的AI翻译，只要格式对上导入字库就行了，格式为：**English=英文**
+汉化参考可能涉及某些**付费插件汉化组**所享有的“知识产权”，因此本项目仅提供汉化框架，不提供现成翻译词典。建议自行添加汉化，但是本项目提供测试文件预览词典格式，请于下载后24小时内自行删除。没汉化的部分可以自行去寻找一些在线的AI翻译（如果你找豆包，那你必须给它加“AE术语翻译”这个前提，豆包是真的连词都翻不对，建议用其他的AI去翻译），只要格式对上导入字库就行了，格式为：**English=英文**
 添加与使用方法如下图：
 ![Kosuzu 自定义词典与批量汉化操作演示](docs/assets/dictionary-demo.gif)
 ## 构建
