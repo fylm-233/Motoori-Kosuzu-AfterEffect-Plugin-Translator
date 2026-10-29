@@ -50,24 +50,24 @@
 | 层 | 技术与职责 |
 | --- | --- |
 | AE 面板 | ExtendScript / ScriptUI：停靠面板、开关、批量词典编辑 |
-| 原生后端 | C++20 / Win32：进程连接、后台加载、状态维护 |
+| 原生后端 | Rust / Win32：进程连接、后台加载、状态维护 |
 | 文字替换 | Windows DirectWrite：在共享工厂文字布局创建路径按本地词典替换文本 |
 | 词典查找 | 不可变哈希表快照：本地精确匹配、模式切换、重载时切换词表 |
 | 交互通信 | 按 AE 进程隔离的本地 JSON 请求与响应，面板异步等待确认 |
 | 剪贴板 | Win32 Unicode 剪贴板助手 |
 | 安装 | PowerShell + Windows 管理员提权，支持旧版识别、备份与用户词典迁移 |
 
-原生组件使用静态 C++ 运行库。替换作用于显示文字，不修改工程参数值、表达式或第三方插件文件。
+原生组件静态链接运行库，只依赖 Windows 自带的 DLL。替换作用于显示文字，不修改工程参数值、表达式或第三方插件文件。
 
 ## 从源码构建
 
-开发环境：Windows x64、Visual Studio C++ 工具及 Windows SDK。
+开发环境：Windows x64、Rust 工具链（`x86_64-pc-windows-msvc`）及 MSVC Build Tools。
 
-1. 克隆仓库，运行 `Build-Native.cmd`。
+1. 克隆仓库，运行 `Build.cmd`。
 2. 编译成功后，`backend` 下生成原生 DLL 和助手 EXE。
 3. 保存工程、关闭 AE，运行 `Install.cmd` 安装。
 
-`native` 包含后端及独立测试源码；`backend` 包含 JSON 编解码器和词典编辑器。可选 EXE 安装器引导源码为 `native/Setup.cpp`，封装时需嵌入内容 ZIP 资源。
+`crates` 包含后端及独立测试源码；`backend` 包含 JSON 编解码器和词典编辑器。可选 EXE 安装器封装时需嵌入内容 ZIP 资源。
 
 ## 当前限制
 
