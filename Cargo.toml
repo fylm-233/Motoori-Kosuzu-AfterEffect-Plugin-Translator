@@ -1,0 +1,49 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/kosuzu-core",
+    "crates/kosuzu-winutil",
+    "crates/kosuzu-native",
+    "crates/kosuzu-selfcheck",
+    "crates/kosuzu-controller",
+    "crates/kosuzu-clipboard",
+    "crates/kosuzu-dictcheck",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+publish = false
+
+[workspace.dependencies]
+kosuzu-core = { path = "crates/kosuzu-core" }
+kosuzu-winutil = { path = "crates/kosuzu-winutil" }
+arc-swap = "1.9"
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_DataExchange",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Environment",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_Ole",
+    "Win32_System_ProcessStatus",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+# 注入型 DLL 必须 panic=abort：一旦 unwinding 穿过宿主的栈帧即为未定义行为。
+# 因此所有导出函数与绘制回调都写成不可 panic 的形式，而不是依赖 catch_unwind。
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"

@@ -1,0 +1,15 @@
+[package]
+name = "kosuzu-clipboard"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "KosuzuClipboard.exe：给 ScriptUI 用的最小剪贴板搬运工（copy/paste 文本文件）"
+
+[[bin]]
+name = "KosuzuClipboard"
+path = "src/main.rs"
+
+[dependencies]
+kosuzu-winutil.workspace = true
+windows-sys.workspace = true

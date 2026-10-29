@@ -1,0 +1,9 @@
+# 构建产物
+/target/
+/dist/
+/backend/*.dll
+/backend/*.exe
+/backend/*.pdb
+
+# 运行时目录（面板启动后端后会在安装目录生成，源码目录一般不会出现）
+/runtime/

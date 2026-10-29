@@ -1,0 +1,26 @@
+[package]
+name = "kosuzu-selfcheck"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "KosuzuSelfCheck.exe：对照原 C++ 自检项，验证 Rust 版 DLL 的查表、拦截、协议与容量"
+
+[[bin]]
+name = "KosuzuSelfCheck"
+path = "src/main.rs"
+
+[dependencies]
+kosuzu-core.workspace = true
+kosuzu-winutil.workspace = true
+windows-sys.workspace = true
+# 自检程序用类型化的 DirectWrite 绑定量文字宽度；DLL 本身仍走手写 vtable 槽位。
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_DirectWrite",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_ProcessStatus",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+] }

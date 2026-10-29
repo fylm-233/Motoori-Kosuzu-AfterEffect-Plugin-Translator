@@ -1,0 +1,10 @@
+[package]
+name = "kosuzu-winutil"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Kosuzu 各原生组件共用的小工具：宽字符串、时间戳、原子写文件"
+
+[dependencies]
+windows-sys.workspace = true

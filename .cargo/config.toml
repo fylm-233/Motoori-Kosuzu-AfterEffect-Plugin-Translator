@@ -1,0 +1,4 @@
+# 注入到 After Effects 的 DLL 不能依赖 VC++ 运行库，必须静态链接 CRT。
+# 这项设置没有稳定的 Cargo.toml 表达方式，只能放在 rustflags 里。
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

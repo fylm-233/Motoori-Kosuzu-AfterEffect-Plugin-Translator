@@ -1,0 +1,12 @@
+[package]
+name = "kosuzu-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Kosuzu 纯逻辑内核：严格 JSON、词典合并、词条查表（无 Win32 依赖，可在任意平台 cargo test）"
+
+[dependencies]
+arc-swap.workspace = true
+
+[dev-dependencies]

@@ -1,0 +1,16 @@
+[package]
+name = "kosuzu-controller"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "KosuzuController.exe：定位 AfterFX.exe，把 KosuzuNative.dll 注入并启动工作线程"
+
+[[bin]]
+name = "KosuzuController"
+path = "src/main.rs"
+
+[dependencies]
+kosuzu-core.workspace = true
+kosuzu-winutil.workspace = true
+windows-sys.workspace = true

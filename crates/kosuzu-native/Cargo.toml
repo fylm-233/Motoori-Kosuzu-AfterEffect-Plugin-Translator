@@ -1,0 +1,16 @@
+[package]
+name = "kosuzu-native"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "KosuzuNative.dll：注入 After Effects 的 DirectWrite 文本布局拦截器 + 文件式控制通道"
+
+[lib]
+name = "KosuzuNative"
+crate-type = ["cdylib"]
+
+[dependencies]
+kosuzu-core.workspace = true
+kosuzu-winutil.workspace = true
+windows-sys.workspace = true

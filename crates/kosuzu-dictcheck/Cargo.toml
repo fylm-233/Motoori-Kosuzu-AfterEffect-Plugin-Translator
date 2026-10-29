@@ -1,0 +1,15 @@
+[package]
+name = "kosuzu-dictcheck"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+description = "KosuzuDictionaryCheck.exe：安装脚本在覆盖用户词典前调用的静态校验器"
+
+[[bin]]
+name = "KosuzuDictionaryCheck"
+path = "src/main.rs"
+
+[dependencies]
+kosuzu-core.workspace = true
+kosuzu-winutil.workspace = true
