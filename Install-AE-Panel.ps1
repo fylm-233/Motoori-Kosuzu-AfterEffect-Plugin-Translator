@@ -1,11 +1,12 @@
 ﻿param([string]$PanelDirectory='',[switch]$Quiet)
 $ErrorActionPreference='Stop'
-$version='0.8.3-test'
+$version='0.8.5-test'
 function Is-Admin {([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)}
 if(-not(Is-Admin)){
  try{$engine=Join-Path $PSHOME 'powershell.exe';if($PSVersionTable.PSEdition -eq 'Core'){$engine=Join-Path $PSHOME 'pwsh.exe'}
- $arguments=@('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+$PSCommandPath+'"'));if($PanelDirectory){$arguments+=@('-PanelDirectory',('"'+$PanelDirectory+'"'))};if($Quiet){$arguments+='-Quiet'}
- $child=Start-Process -FilePath $engine -Verb RunAs -WindowStyle Hidden -Wait -PassThru -ArgumentList $arguments
+ $arguments=@('-STA','-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+$PSCommandPath+'"'));if($PanelDirectory){$arguments+=@('-PanelDirectory',('"'+$PanelDirectory+'"'))};if($Quiet){$arguments+='-Quiet'}
+ $windowStyle=if($Quiet){'Hidden'}else{'Normal'}
+ $child=Start-Process -FilePath $engine -Verb RunAs -WindowStyle $windowStyle -Wait -PassThru -ArgumentList $arguments
  if($child.ExitCode -ne 0){throw "安装进程错误码 $($child.ExitCode)，请查看 %LOCALAPPDATA%\Kosuzu\install.log"};exit 0
  }catch{Write-Error ('管理员授权取消或安装失败：'+$_.Exception.Message);exit 1}
 }
@@ -14,12 +15,38 @@ New-Item -ItemType Directory -Path $productHome -Force|Out-Null
 $log=Join-Path $productHome 'install.log'
 function Note([string]$text){Add-Content -LiteralPath $log -Value ((Get-Date -Format s)+' '+$text) -Encoding UTF8;Write-Output $text}
 function Assert-Child([string]$path,[string]$parent){$full=[IO.Path]::GetFullPath($path);$prefix=[IO.Path]::GetFullPath($parent).TrimEnd('\')+'\';if(-not $full.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){throw "路径超出本居小铃安装目录：$full"}}
+function Resolve-KosuzuAEFolder([string]$Folder){
+ $selected=[IO.Path]::GetFullPath($Folder).TrimEnd('\')
+ $supports=@((Join-Path $selected 'Support Files'),$selected)
+ if([IO.Path]::GetFileName($selected) -eq 'ScriptUI Panels'){$supports+=Split-Path (Split-Path $selected -Parent) -Parent}
+ foreach($support in $supports){if(Test-Path -LiteralPath (Join-Path $support 'AfterFX.exe') -PathType Leaf){return (Join-Path $support 'Scripts\ScriptUI Panels')}}
+ throw '请选择 AE 安装文件夹、Support Files 或 ScriptUI Panels；未找到 AfterFX.exe。'
+}
+function Get-KosuzuAEInstallations([string[]]$AdobeDirectories=@('C:\Program Files\Adobe')){
+ foreach($year in @(2026,2025,2024,2023)){foreach($adobe in $AdobeDirectories){$folder=Join-Path $adobe ('Adobe After Effects '+$year);try{$resolved=Resolve-KosuzuAEFolder $folder;[PSCustomObject]@{Year=$year;PanelDirectory=$resolved;Label=('After Effects '+$year+' — '+$folder)}}catch{}}}
+}
+function Select-KosuzuAEFolder($Candidates){
+ Add-Type -AssemblyName System.Windows.Forms
+ $form=New-Object Windows.Forms.Form;$form.Text='本居小铃 Kosuzu — 选择 AE';$form.ClientSize=New-Object Drawing.Size(680,200);$form.StartPosition='CenterScreen';$form.FormBorderStyle='FixedDialog';$form.MaximizeBox=$false;$form.MinimizeBox=$false
+ $label=New-Object Windows.Forms.Label;$label.Text='自动检测 C 盘 AE 2023–2026；其他位置请点击“浏览目录”。';$label.SetBounds(18,15,645,30)
+ $list=New-Object Windows.Forms.ComboBox;$list.DropDownStyle='DropDownList';$list.SetBounds(18,50,645,28)
+ foreach($candidate in $Candidates){[void]$list.Items.Add($candidate.Label)};if($list.Items.Count){$list.SelectedIndex=0}
+ $pathBox=New-Object Windows.Forms.TextBox;$pathBox.ReadOnly=$true;$pathBox.SetBounds(18,90,645,25);if($Candidates.Count){$pathBox.Text=$Candidates[0].PanelDirectory}
+ $list.Add_SelectedIndexChanged({if($list.SelectedIndex -ge 0){$pathBox.Text=$Candidates[$list.SelectedIndex].PanelDirectory}})
+ $browse=New-Object Windows.Forms.Button;$browse.Text='浏览目录…';$browse.SetBounds(18,140,130,32)
+ $browse.Add_Click({$picker=New-Object Windows.Forms.FolderBrowserDialog;$picker.Description='选择 AE 安装目录或 Support Files 文件夹';$picker.ShowNewFolderButton=$false;try{if($picker.ShowDialog() -eq 'OK'){try{$pathBox.Text=Resolve-KosuzuAEFolder $picker.SelectedPath}catch{[Windows.Forms.MessageBox]::Show($_.Exception.Message,'目录无效')|Out-Null}}}finally{$picker.Dispose()}})
+ $install=New-Object Windows.Forms.Button;$install.Text='安装到此 AE';$install.SetBounds(385,140,130,32);$install.Add_Click({if(-not $pathBox.Text){[Windows.Forms.MessageBox]::Show('请先选择 AE 目录。','Kosuzu')|Out-Null;return};$form.DialogResult='OK';$form.Close()})
+ $cancel=New-Object Windows.Forms.Button;$cancel.Text='取消';$cancel.SetBounds(530,140,130,32);$cancel.DialogResult='Cancel';$form.CancelButton=$cancel;$form.AcceptButton=$install
+ $form.Controls.AddRange(@($label,$list,$pathBox,$browse,$install,$cancel));$form.TopMost=$true;$form.Add_Shown({$form.Activate();$form.TopMost=$false});try{if($form.ShowDialog() -ne 'OK'){throw '安装已取消，未更改 AE。'};return $pathBox.Text}finally{$form.Dispose()}
+}
 try{
+ Note '安装程序已启动，准备检测并选择 AE 目录。'
  if(Get-Process AfterFX -ErrorAction SilentlyContinue){throw '请先保存工程并关闭 AE，再运行安装。安装不会强制关闭 AE。'}
  if(-not $PanelDirectory){
-  $candidates=@();$adobe=Join-Path $env:ProgramFiles 'Adobe';if(Test-Path -LiteralPath $adobe){$candidates=@(Get-ChildItem -LiteralPath $adobe -Directory -Filter 'Adobe After Effects *'|Sort-Object Name -Descending|ForEach-Object{Join-Path $_.FullName 'Support Files\Scripts\ScriptUI Panels'}|Where-Object{Test-Path -LiteralPath $_ -PathType Container})}
-  if(-not $candidates.Count){throw '未找到 AE。请用 -PanelDirectory 指定 ScriptUI Panels 目录。'}
-  $PanelDirectory=$candidates[0]
+  $candidates=@(Get-KosuzuAEInstallations)
+  if($Quiet){if(-not $candidates.Count){throw '未找到 C 盘 AE 2023–2026；请使用 -PanelDirectory 指定目录。'};$PanelDirectory=$candidates[0].PanelDirectory}
+  else{$PanelDirectory=Select-KosuzuAEFolder $candidates}
+  if(-not(Test-Path -LiteralPath $PanelDirectory)){New-Item -ItemType Directory -Path $PanelDirectory -Force|Out-Null}
  }
  if(-not(Test-Path -LiteralPath $PanelDirectory -PathType Container)){throw '指定的 ScriptUI Panels 目录不存在。'}
  $installRoot=Join-Path $productHome 'app';$stage=Join-Path $productHome ('staging-'+[Guid]::NewGuid().ToString('N'));$backup=Join-Path $productHome ('backups\'+(Get-Date -Format yyyyMMddHHmmssfff))
