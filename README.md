@@ -5,77 +5,138 @@
 
 **仅发布框架，默认不附带翻译词典。** 支持 Windows x64，当前以 After Effects 2026 为测试目标；Premiere Pro 暂未接入。
 **Releases**提供了一键安装的版本，本项目不定期维护，本项目为GPT6sol+codex许愿式编程创建产物，目的其实仅本人日常使用。
-## 下载与安装
+## 构建
 
-前往 [Releases](https://github.com/fylm-233/Motoori-Kosuzu-AfterEffect-Plugin-Translator/releases) 下载空词典 EXE 安装包或完整内容 ZIP。
+依赖：Rust 1.75+（`x86_64-pc-windows-msvc`，rustup 默认安装即可）、MSVC Build Tools。
+不需要 Visual Studio IDE，也不需要 Adobe SDK。
 
-1. 保存工程并关闭 AE，运行 EXE 安装包，允许管理员提权。使用 ZIP 时先解压，再双击 `Install.cmd`。
-2. 启动 AE，从「窗口 → Kosuzu.jsx」打开面板，可拖动停靠。
-3. 在 AE「首选项 → 脚本和表达式」中允许脚本写入文件。
-4. 打开「词典」，导入或添加自己的译文，保存后开启「参数」「名称」开关。
+```bat
+Build.cmd      :: 编译，产物落到 .\backend
+Verify.cmd     :: 单元测试 + 四项端到端自检
+```
 
-后端随面板自动启动，运行时无需联网，不需安装 Node、Python、Frida、Java 或开发工具。
+## 安装
 
-首次全新安装的四份词典均为 `{}`，安装后不会立即翻译。升级安装会保留本机已有的自定义词典，不会用空文件覆盖用户译文。
+```bat
+:: 先关闭 After Effects（安装脚本检测到 AE 在运行会拒绝）
+Install.cmd
+```
 
-## 为什么不提供现成词典？
+安装器会申请管理员权限（只为写入 AE 的 `ScriptUI Panels`），自动检测 C 盘的 AE 2023–2026，
+也可以手动指定目录。程序装到 `%LOCALAPPDATA%\Kosuzu\app`，面板写进所选 AE。
 
-汉化参考可能涉及一些付费插件汉化组所享有的知识产权，因此本项目仅提供汉化框架，不提供现成翻译词典。建议自行添加汉化，或导入已经取得授权的词典。这部分可以自行去寻找一些在线的AI翻译，只要格式对上导入字库就行格式为：**English=英文**
+启动 AE，从「窗口」菜单打开 `Kosuzu.jsx`，勾选「参数」「名称」即可。后端由面板自动拉起，
+不需要手动运行任何程序。
 
-添加与使用方法如下图：
+卸载：关闭 AE，运行 `Uninstall.ps1`。它只移除面板，应用目录、词典与备份都保留。
 
-![Kosuzu 自定义词典与批量汉化操作演示](docs/assets/dictionary-demo.gif)
+## 目录结构
 
-## 自定义汉化
+```
+Kosuzu-Source/
+├── Kosuzu.jsx                   面板（ExtendScript，安装时拼装成单文件）
+├── backend/
+│   ├── json.jsxinc              面板用的严格 JSON 编解码
+│   ├── dictionary-manager.jsxinc 词典窗口
+│   └── *.dll / *.exe            构建产物（Build.cmd 生成，不入库）
+├── dictionaries/                词典（本仓库只带 10 条示例）
+├── crates/
+│   ├── kosuzu-core/             零 Win32 依赖：JSON、词典合并、查表、协议
+│   ├── kosuzu-winutil/          宽字符串、时间戳、原子写文件
+│   ├── kosuzu-native/           KosuzuNative.dll
+│   ├── kosuzu-controller/       KosuzuController.exe
+│   ├── kosuzu-clipboard/        KosuzuClipboard.exe
+│   ├── kosuzu-dictcheck/        KosuzuDictionaryCheck.exe
+│   └── kosuzu-selfcheck/        KosuzuSelfCheck.exe（自检工具）
+├── docs/DESIGN.md               设计取舍、与原 C++ 实现的实测对比
+├── Install.cmd / Install-AE-Panel.ps1 / Uninstall.ps1
+└── .cargo/config.toml           关键：静态链接 CRT
+```
 
-- **提取待译内容**：选中带有效果的图层，读取插件名称与参数；已有有效译文会自动排除。
-- **直接编辑**：名称与参数分别使用连续多行编辑框，按 `English=译文` 格式批量填写。
-- **批量复制粘贴**：点击「一键复制待译原文」，在其他软件翻译，保持顺序和行数，再点「一键粘贴翻译结果」。也可以粘贴完整的 `English=译文` 映射。
-- **保存与重载**：保存前自动备份。空白译文和原文原样返回不作为有效翻译保存；行数不符或草稿改变时拒绝自动配对，避免错位。
-- **切回原文**：关闭对应开关。若文字仍被 AE 缓存，可切换效果面板或折叠、展开参数。
+## 架构
 
-词典为普通 JSON 对象，区分英文键的大小写，不会作为脚本执行。
+一个 DLL 加三个可执行文件，全部是薄组件：
 
-| 文件 | 用途 |
+| 组件 | 职责 |
 | --- | --- |
-| `Kosuzu.base.names.json` | 基础插件名称词典 |
-| `Kosuzu.base.parameters.json` | 基础参数词典 |
-| `Kosuzu.names.json` | 用户名称词典 |
-| `Kosuzu.parameters.json` | 用户参数词典 |
+| `KosuzuNative.dll` | 被注入 AE 进程。改写共享 `IDWriteFactory` vtable 的槽位 18/19，命中词典时替换文字；同时跑一个工作线程，轮询请求目录、写心跳 |
+| `KosuzuController.exe` | 找到唯一的 `AfterFX.exe`，把 DLL 注入进去，远程调用它的 `LB_Start` |
+| `KosuzuClipboard.exe` | 面板没法可靠读写剪贴板，由它代劳（`copy`/`paste` + 回执文件） |
+| `KosuzuDictionaryCheck.exe` | 安装脚本覆盖用户词典前做静态校验，退出码非 0 就中止 |
 
-安装后的词典位于 `%LOCALAPPDATA%\Kosuzu\app\dictionaries`。源码中的词典保持为空，发布时请勿混入自己的译文、运行日志或备份。
+后端与面板之间**不用管道、不用 socket**，只交换文件。运行时目录：
 
-## 实现框架
+```
+%LOCALAPPDATA%\Kosuzu\app\runtime\
+├── connection.json            控制器写入：注入是否成功
+└── ae-<PID>\
+    ├── status.json            引擎心跳（每秒一次）
+    ├── requests\<id>.json     面板写入的命令
+    └── responses\<id>.json    引擎写入的应答（面板读完自己删）
+```
 
-| 层 | 技术与职责 |
+## 文件协议
+
+面板每 2 秒读一次 `status.json`，心跳超过 5 秒视为断连。
+
+`status.json`：
+
+| 字段 | 含义 |
 | --- | --- |
-| AE 面板 | ExtendScript / ScriptUI：停靠面板、开关、批量词典编辑 |
-| 原生后端 | Rust / Win32：进程连接、后台加载、状态维护 |
-| 文字替换 | Windows DirectWrite：在共享工厂文字布局创建路径按本地词典替换文本 |
-| 词典查找 | 不可变哈希表快照：本地精确匹配、模式切换、重载时切换词表 |
-| 交互通信 | 按 AE 进程隔离的本地 JSON 请求与响应，面板异步等待确认 |
-| 剪贴板 | Win32 Unicode 剪贴板助手 |
-| 安装 | PowerShell + Windows 管理员提权，支持旧版识别、备份与用户词典迁移 |
+| `running` | 引擎是否存活 |
+| `pid` | 宿主进程 PID，面板会与 `connection.json` 的 pid 比对 |
+| `heartbeat` | 毫秒时间戳 |
+| `engine` | 引擎标识，用于区分实现版本 |
+| `state.names` / `state.parameters` | 两个开关的当前状态 |
+| `rules` | 已装载词条数 |
+| `generation` | 每次成功重载 +1 |
+| `hits` | 实际替换过的文字布局次数 |
+| `error` | 最近一次错误文本，空字符串表示正常 |
 
-原生组件静态链接运行库，只依赖 Windows 自带的 DLL。替换作用于显示文字，不修改工程参数值、表达式或第三方插件文件。
+`connection.json`：`{created, pid, ok, error}`。
 
-## 从源码构建
+请求包 `{id, created, method, state}`：
 
-开发环境：Windows x64、Rust 工具链（`x86_64-pc-windows-msvc`）及 MSVC Build Tools。
+* `method` 只接受 `set` / `reload` / `stop` / `status`；
+* `id` 必须与文件名一致，只允许字母数字与连字符，最长 100；
+* `created` 与当前时间相差超过 30 秒即拒绝；
+* 单轮最多处理 8 个请求，响应先写临时文件再 `MoveFileEx` 替换，避免读到半截 JSON。
 
-1. 克隆仓库，运行 `Build.cmd`。
-2. 编译成功后，`backend` 下生成原生 DLL 和助手 EXE。
-3. 保存工程、关闭 AE，运行 `Install.cmd` 安装。
+## 词典格式
 
-`crates` 包含后端及独立测试源码；`backend` 包含 JSON 编解码器和词典编辑器。可选 EXE 安装器封装时需嵌入内容 ZIP 资源。
+`dictionaries/` 下四个文件，按「基础 → 自定义」顺序合并，后者覆盖前者：
 
-## 当前限制
+```
+Kosuzu.base.names.json        Kosuzu.names.json
+Kosuzu.base.parameters.json   Kosuzu.parameters.json
+```
 
-项目处于测试阶段。覆盖受插件绘制方式、独立工厂和 AE 缓存影响，不保证所有插件都能命中。当前版本只支持同时运行一个 AE 进程；面板回调修复、各插件交互及长期稳定性仍需持续测试。GIF 展示一种操作流程，不代表所有插件的兼容性。
+* 必须是扁平 JSON 对象，键是原文，值是译文；
+* 键不能为空，不能是 `__proto__` / `constructor` / `prototype`；
+* 空译文不会覆盖已有译文；原文与译文相同、或译文全是空白的条目会被丢弃；
+* 单文件上限 10 MiB，单条原文/译文上限 8192 个 UTF-16 单元，总条目上限 100,000；
+* 词典只当数据读，不会被执行。
 
-反馈问题时请说明 AE 版本、插件名称和复现步骤；日志中的个人路径与工程信息请先移除。
+## 改代码前必读
+
+1. **不能 panic**。整个工作区以 `panic = "abort"` 编译，`catch_unwind` 无效；
+   一个 `unwrap` 会让宿主 After Effects 直接退出。导出函数与绘制回调里不要出现
+   `unwrap` / `expect` / 切片索引 / `format!`。
+2. **绘制回调不能分配、不能加锁**。`lookup::translate_raw` 是这条线的边界：
+   表用 `ArcSwap` 无锁发布，翻译缓冲是栈上的 `MaybeUninit<[u16; 8193]>`。
+3. **注入的 DLL 必须静态链接 CRT**。删掉 `.cargo/config.toml` 里的 `+crt-static`
+   会让产物依赖 `VCRUNTIME140.dll`，在没装 VC++ 运行库的机器上加载失败。
+4. **协议字段不能改名**。`status.json`、`connection.json`、请求响应包的字段名和错误文本
+   都是面板在读，改了面板就断。
+
+## 已知限制
+
+* 只覆盖走共享 DirectWrite 工厂的文字绘制。使用其他绘制路径、独立工厂或自己缓存文本的插件可能不生效。
+* 只支持同时运行一个 AE 进程。
+* 目前只验证 After Effects，尚未接入 Premiere Pro。
+* 词典需要用户自己积累；本仓库只带 10 条示例。
 
 ## 许可证
 
-框架代码采用 [MIT License](LICENSE)。不随项目分发任何第三方插件翻译词库；外部词典和第三方插件的权利归各自权利人所有。
-本软件的“本居小铃”名取自《东方 Project》， 系上海爱丽丝幻乐团的既有作品角色，仅作软件命名致敬，与原作无关联。
+* 框架代码采用 [MIT License](LICENSE)。不随项目分发任何第三方插件翻译词库；外部词典和第三方插件的权利归各自权利人所有。
+* 本软件的“本居小铃”名取自《东方 Project》， 系上海爱丽丝幻乐团的既有作品角色，仅作软件命名致敬，与原作无关联。
