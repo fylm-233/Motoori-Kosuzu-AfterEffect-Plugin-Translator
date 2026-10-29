@@ -4,7 +4,7 @@
 面向 Adobe After Effects 的本地词典汉化框架。用自己的词典翻译插件名称与参数文字，通过面板开关切换译文和原文。
 
 **仅发布框架，默认不附带翻译词典。** 支持 Windows x64，当前以 After Effects 2026 为测试目标；Premiere Pro 暂未接入。
-
+**Releases**提供了一键安装的版本，本项目不定期维护，本项目为GPT6sol+codex许愿式编程创建产物，目的其实仅本人日常使用。
 ## 下载与安装
 
 前往 [Releases](https://github.com/fylm-233/Kosuzu/releases) 下载空词典 EXE 安装包或完整内容 ZIP。
