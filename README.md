@@ -7,7 +7,7 @@
 **Releases**提供了一键安装的版本，本项目不定期维护，本项目为GPT6sol+codex许愿式编程创建产物，目的其实仅本人日常使用。
 ## 下载与安装
 
-前往 [Releases](https://github.com/fylm-233/Kosuzu/releases) 下载空词典 EXE 安装包或完整内容 ZIP。
+前往 [Releases](https://github.com/fylm-233/Motoori-Kosuzu-AfterEffect-Plugin-Translator/releases) 下载空词典 EXE 安装包或完整内容 ZIP。
 
 1. 保存工程并关闭 AE，运行 EXE 安装包，允许管理员提权。使用 ZIP 时先解压，再双击 `Install.cmd`。
 2. 启动 AE，从「窗口 → Kosuzu.jsx」打开面板，可拖动停靠。
